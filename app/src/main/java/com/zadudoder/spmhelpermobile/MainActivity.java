@@ -1,48 +1,89 @@
 package com.zadudoder.spmhelpermobile;
 
 import android.os.Bundle;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentTransaction;
+import androidx.fragment.app.FragmentActivity;
+import androidx.viewpager2.adapter.FragmentStateAdapter;
+import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
+    private ViewPager2 viewPager;
+    private BottomNavigationView bottomNavigation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Инициализация ViewPager2
+        viewPager = findViewById(R.id.view_pager);
+        viewPager.setAdapter(new ScreenSlidePagerAdapter(this));
+        viewPager.setUserInputEnabled(true); // Включаем свайпы
+
         // Инициализация нижней навигации
-        BottomNavigationView bottomNavigation = findViewById(R.id.bottom_navigation);
-        bottomNavigation.setOnNavigationItemSelectedListener(item -> {
-            Fragment selectedFragment = null;
+        bottomNavigation = findViewById(R.id.bottom_navigation);
 
-            if (item.getItemId() == R.id.navigation_transfers) {
-                selectedFragment = new TransfersFragment();
-            } else if (item.getItemId() == R.id.navigation_cards) {
-                selectedFragment = new CardsFragment();
+        // Связываем ViewPager и BottomNavigation
+        setupViewPagerWithNavigation();
+    }
+
+    private void setupViewPagerWithNavigation() {
+        // Обработчик свайпов
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+                // Синхронизируем нижнее меню при свайпе
+                if (position == 0) {
+                    bottomNavigation.setSelectedItemId(R.id.navigation_transfers);
+                } else if (position == 1) {
+                    bottomNavigation.setSelectedItemId(R.id.navigation_cards);
+                }
             }
-
-            if (selectedFragment != null) {
-                FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-                transaction.replace(R.id.fragment_container, selectedFragment);
-                transaction.commit();
-            }
-
-            return true;
         });
 
-        // Загружаем начальный фрагмент
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new TransfersFragment())
-                    .commit();
+        // Обработчик кликов в нижнем меню
+        bottomNavigation.setOnNavigationItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.navigation_transfers) {
+                viewPager.setCurrentItem(0, true);
+                return true;
+            } else if (itemId == R.id.navigation_cards) {
+                viewPager.setCurrentItem(1, true);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    // Адаптер для ViewPager
+    private static class ScreenSlidePagerAdapter extends FragmentStateAdapter {
+        public ScreenSlidePagerAdapter(FragmentActivity fa) {
+            super(fa);
+        }
+
+        @NonNull
+        @Override
+        public Fragment createFragment(int position) {
+            if (position == 0) {
+                return new TransfersFragment();
+            }
+            return new CardsFragment();
+        }
+
+        @Override
+        public int getItemCount() {
+            return 2;
         }
     }
 
+    // Обновление фрагмента переводов
     public void updateTransfersFragment() {
-        Fragment fragment = getSupportFragmentManager().findFragmentByTag("TransfersFragment");
+        Fragment fragment = getSupportFragmentManager()
+                .findFragmentByTag("f" + viewPager.getCurrentItem());
         if (fragment instanceof TransfersFragment) {
             ((TransfersFragment) fragment).updateSelectedCardInfo();
         }

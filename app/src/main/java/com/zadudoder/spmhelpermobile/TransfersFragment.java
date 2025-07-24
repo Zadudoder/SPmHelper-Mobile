@@ -335,6 +335,25 @@ public class TransfersFragment extends Fragment {
                     senderCard = cards.get(0);
                 }
 
+                // Проверка суммы
+                if (amount == 0) {
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        amountInputLayout.setError("Сумма не может быть равна 0");
+                    });
+                    return;
+                }
+
+                if (amount > 10000) {
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        amountInputLayout.setError("Максимальная сумма перевода - 10000 АР");
+                    });
+                    return;
+                }
+
                 String authString = senderCard.getId() + ":" + senderCard.getToken();
                 String encodedAuth = android.util.Base64.encodeToString(
                         authString.getBytes(),
@@ -356,6 +375,18 @@ public class TransfersFragment extends Fragment {
                         });
                         return;
                     }
+                }
+
+                // Проверка на совпадение карт
+                if (senderCard.getNumber().equals(targetReceiver)) {
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        Toast.makeText(getContext(),
+                                "Нельзя перевести на ту же карту",
+                                Toast.LENGTH_SHORT).show();
+                    });
+                    return;
                 }
 
                 // Формируем запрос на перевод

@@ -29,26 +29,30 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"/>
 
-        <LinearLayout
+        <!-- Используем RelativeLayout вместо LinearLayout -->
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:layout_marginTop="8dp">
 
-            <Button
-                android:id="@+id/delete_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Удалить"/>
-
+            <!-- Текст "Для оплаты" (если есть) -->
             <TextView
                 android:id="@+id/selected_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="Выбрана для оплаты"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:text="Для оплаты"
                 android:textColor="@color/green"
                 android:visibility="gone"/>
-        </LinearLayout>
+
+            <!-- Кнопка "Удалить" (всегда справа) -->
+            <Button
+                android:id="@+id/delete_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:text="Удалить"/>
+        </RelativeLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>
