@@ -7,8 +7,6 @@
     android:layout_height="match_parent"
     tools:context=".TransfersFragment">
 
-    <!-- Изменения в ImageView -->
-
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="0dp"
@@ -38,7 +36,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageView">
 
-        <!-- RadioGroup для выбора типа перевода -->
         <RadioGroup
             android:id="@+id/transferTypeGroup"
             android:layout_width="match_parent"
@@ -61,7 +58,6 @@
                 android:text="По никнейму" />
         </RadioGroup>
 
-        <!-- Поле для никнейма/номера карты -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/receiver_input_layout"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -82,7 +78,6 @@
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Поле для выбора карты -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/card_selection_layout"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -104,7 +99,6 @@
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Поле для суммы -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/amount_input_layout"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -125,7 +119,6 @@
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Поле для комментария -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/comment_input_layout"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -144,10 +137,6 @@
                 android:maxLines="3" />
         </com.google.android.material.textfield.TextInputLayout>
     </LinearLayout>
-
-    <!-- Кнопка перевода -->
-
-    <!-- Информация о карте -->
 
     <Button
         android:id="@+id/transfer_button"
@@ -177,7 +166,6 @@
         app:layout_constraintTop_toBottomOf="@+id/transfer_button"
         tools:text="Перевод с: Dydka (22311)\nБаланс: 336 AP" />
 
-    <!-- Индикатор загрузки -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"

@@ -29,13 +29,11 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"/>
 
-        <!-- Используем RelativeLayout вместо LinearLayout -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp">
 
-            <!-- Текст "Для оплаты" (если есть) -->
             <TextView
                 android:id="@+id/selected_label"
                 android:layout_width="wrap_content"
@@ -46,7 +44,6 @@
                 android:textColor="@color/green"
                 android:visibility="gone"/>
 
-            <!-- Кнопка "Удалить" (всегда справа) -->
             <Button
                 android:id="@+id/delete_button"
                 android:layout_width="wrap_content"

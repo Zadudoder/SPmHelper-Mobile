@@ -18,25 +18,20 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Инициализация ViewPager2
         viewPager = findViewById(R.id.view_pager);
         viewPager.setAdapter(new ScreenSlidePagerAdapter(this));
-        viewPager.setUserInputEnabled(true); // Включаем свайпы
+        viewPager.setUserInputEnabled(true);
 
-        // Инициализация нижней навигации
         bottomNavigation = findViewById(R.id.bottom_navigation);
 
-        // Связываем ViewPager и BottomNavigation
         setupViewPagerWithNavigation();
     }
 
     private void setupViewPagerWithNavigation() {
-        // Обработчик свайпов
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
-                // Синхронизируем нижнее меню при свайпе
                 if (position == 0) {
                     bottomNavigation.setSelectedItemId(R.id.navigation_transfers);
                 } else if (position == 1) {
@@ -45,7 +40,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Обработчик кликов в нижнем меню
         bottomNavigation.setOnNavigationItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.navigation_transfers) {
@@ -59,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Адаптер для ViewPager
     private static class ScreenSlidePagerAdapter extends FragmentStateAdapter {
         public ScreenSlidePagerAdapter(FragmentActivity fa) {
             super(fa);
@@ -80,10 +73,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // Обновление фрагмента переводов
     public void updateTransfersFragment() {
         Fragment fragment = getSupportFragmentManager()
-                .findFragmentByTag("f" + viewPager.getCurrentItem());
+                .findFragmentByTag("android:switcher:" + R.id.view_pager + ":0");
+
         if (fragment instanceof TransfersFragment) {
             ((TransfersFragment) fragment).updateSelectedCardInfo();
         }

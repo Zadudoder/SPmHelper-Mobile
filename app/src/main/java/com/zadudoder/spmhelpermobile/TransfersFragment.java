@@ -17,7 +17,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import okhttp3.MediaType;
@@ -30,34 +29,37 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class TransfersFragment extends Fragment {
 
     private TextInputEditText receiverEditText;
     private TextInputEditText amountEditText;
     private TextInputEditText commentEditText;
+    private TextInputEditText selectedCardEditText;
     private TextInputLayout receiverInputLayout;
     private TextInputLayout amountInputLayout;
     private TextInputLayout commentInputLayout;
+    private TextInputLayout cardSelectionLayout;
     private Button transferButton;
     private ProgressBar progressBar;
     private TextView selectedCardInfo;
-    private OkHttpClient httpClient;
-    private SharedPreferences sharedPref;
-
-    private TextInputEditText selectedCardEditText;
-    private TextInputLayout cardSelectionLayout;
     private RadioGroup transferTypeGroup;
     private RadioButton transferByCard;
     private RadioButton transferByNickname;
-
+    private OkHttpClient httpClient;
+    private SharedPreferences sharedPref;
     private String selectedReceiverCardNumber;
     private List<Card> receiverCards = new ArrayList<>();
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        httpClient = new OkHttpClient();
+        httpClient = new OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .build();
         sharedPref = requireActivity().getSharedPreferences("SPWorldsPref", Context.MODE_PRIVATE);
     }
 
@@ -66,7 +68,6 @@ public class TransfersFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_transfers, container, false);
 
-        // Инициализация всех view элементов
         transferTypeGroup = view.findViewById(R.id.transferTypeGroup);
         transferByCard = view.findViewById(R.id.transferByCard);
         transferByNickname = view.findViewById(R.id.transferByNickname);
@@ -77,11 +78,18 @@ public class TransfersFragment extends Fragment {
         receiverInputLayout = view.findViewById(R.id.receiver_input_layout);
         cardSelectionLayout = view.findViewById(R.id.card_selection_layout);
         amountInputLayout = view.findViewById(R.id.amount_input_layout);
+        commentInputLayout = view.findViewById(R.id.comment_input_layout);
         transferButton = view.findViewById(R.id.transfer_button);
         progressBar = view.findViewById(R.id.progressBar);
         selectedCardInfo = view.findViewById(R.id.selected_card_info);
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateSelectedCardInfo();
     }
 
     @Override
@@ -98,18 +106,18 @@ public class TransfersFragment extends Fragment {
             cardSelectionLayout.setVisibility(View.VISIBLE);
         }
 
-        // Обработчик изменения типа перевода
         transferTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.transferByCard) {
                 receiverInputLayout.setHint("Номер карты получателя");
                 cardSelectionLayout.setVisibility(View.GONE);
+                selectedCardEditText.setText("");
+                selectedReceiverCardNumber = null;
             } else {
                 receiverInputLayout.setHint("Никнейм игрока");
                 cardSelectionLayout.setVisibility(View.VISIBLE);
             }
         });
 
-        // Обработчик клика по полю выбора карты
         selectedCardEditText.setOnClickListener(v -> {
             String username = receiverEditText.getText().toString().trim();
             if (username.isEmpty()) {
@@ -119,7 +127,6 @@ public class TransfersFragment extends Fragment {
             fetchUserCards(username);
         });
 
-        // Обработчик кнопки перевода
         transferButton.setOnClickListener(v -> {
             String receiver = receiverEditText.getText().toString().trim();
             String amountStr = amountEditText.getText().toString().trim();
@@ -146,7 +153,6 @@ public class TransfersFragment extends Fragment {
                     return;
                 }
 
-                // Определяем способ перевода
                 if (transferByCard.isChecked()) {
                     makeTransfer(receiver, amount, comment);
                 } else {
@@ -175,20 +181,14 @@ public class TransfersFragment extends Fragment {
                     requireActivity().runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
                         transferButton.setEnabled(true);
-                        Toast.makeText(getContext(), "Нет доступных карт для перевода", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Нет доступных карт для авторизации", Toast.LENGTH_SHORT).show();
                     });
                     return;
                 }
 
-                Card senderCard = cards.get(0); // Берем первую карту для авторизации
-                String authString = senderCard.getId() + ":" + senderCard.getToken();
-                String encodedAuth = android.util.Base64.encodeToString(
-                        authString.getBytes(),
-                        android.util.Base64.NO_WRAP
-                );
-                String authHeader = "Bearer " + encodedAuth;
+                Card senderCard = cards.get(0);
+                String authHeader = getAuthHeader(senderCard);
 
-                // Получаем карты пользователя
                 Request request = new Request.Builder()
                         .url("https://spworlds.ru/api/public/accounts/" + username + "/cards")
                         .addHeader("Authorization", authHeader)
@@ -196,43 +196,65 @@ public class TransfersFragment extends Fragment {
 
                 Response response = httpClient.newCall(request).execute();
 
-                if (response.isSuccessful()) {
-                    String responseBody = response.body().string();
-                    JSONArray cardsArray = new JSONArray(responseBody);
-
-                    receiverCards.clear();
-                    for (int i = 0; i < cardsArray.length(); i++) {
-                        JSONObject cardJson = cardsArray.getJSONObject(i);
-                        receiverCards.add(new Card(
-                                "", // id не нужен
-                                "", // token не нужен
-                                cardJson.getString("name"),
-                                cardJson.getString("number"),
-                                0 // баланс не нужен
-                        ));
+                if (!response.isSuccessful()) {
+                    final String errorMessage;
+                    if (response.code() == 404) {
+                        errorMessage = "Игрок не найден";
+                    } else if (response.code() == 401) {
+                        errorMessage = "Ошибка авторизации";
+                    } else {
+                        errorMessage = "Ошибка: " + response.code();
                     }
 
                     requireActivity().runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
                         transferButton.setEnabled(true);
-                        showCardSelectionDialog();
+                        Toast.makeText(getContext(), errorMessage, Toast.LENGTH_SHORT).show();
                     });
-                } else {
+                    return;
+                }
+
+                String responseBody = response.body().string();
+                JSONArray cardsArray = new JSONArray(responseBody);
+
+                if (cardsArray.length() == 0) {
                     requireActivity().runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
                         transferButton.setEnabled(true);
-                        Toast.makeText(getContext(),
-                                "Не удалось получить карты игрока",
-                                Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "У игрока нет доступных карт", Toast.LENGTH_SHORT).show();
                     });
+                    return;
                 }
+
+                receiverCards.clear();
+                for (int i = 0; i < cardsArray.length(); i++) {
+                    JSONObject cardJson = cardsArray.getJSONObject(i);
+                    receiverCards.add(new Card(
+                            "",
+                            "",
+                            cardJson.getString("name"),
+                            cardJson.getString("number"),
+                            0
+                    ));
+                }
+
+                requireActivity().runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    transferButton.setEnabled(true);
+                    showCardSelectionDialog();
+                });
+
+            } catch (JSONException e) {
+                requireActivity().runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    transferButton.setEnabled(true);
+                    Toast.makeText(getContext(), "Ошибка обработки данных", Toast.LENGTH_SHORT).show();
+                });
             } catch (Exception e) {
                 requireActivity().runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);
                     transferButton.setEnabled(true);
-                    Toast.makeText(getContext(),
-                            "Ошибка: " + e.getMessage(),
-                            Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Ошибка сети: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
             }
         }).start();
@@ -259,6 +281,149 @@ public class TransfersFragment extends Fragment {
                 .show();
     }
 
+    private void makeTransfer(String receiver, int amount, String comment) {
+        progressBar.setVisibility(View.VISIBLE);
+        transferButton.setEnabled(false);
+
+        new Thread(() -> {
+            try {
+                if (amount <= 0 || amount > 10000) {
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        amountInputLayout.setError(amount <= 0 ?
+                                "Сумма должна быть больше 0" :
+                                "Максимальная сумма - 10000 АР");
+                    });
+                    return;
+                }
+
+                String cardsJson = sharedPref.getString("saved_cards", "[]");
+                List<Card> cards = Card.fromJsonArray(cardsJson);
+
+                if (cards.isEmpty()) {
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        Toast.makeText(getContext(), "Нет доступных карт", Toast.LENGTH_SHORT).show();
+                    });
+                    return;
+                }
+
+                Card senderCard = getSelectedCard(cards);
+                if (senderCard == null) {
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        Toast.makeText(getContext(), "Не выбрана карта для перевода", Toast.LENGTH_SHORT).show();
+                    });
+                    return;
+                }
+
+                String authString = senderCard.getId() + ":" + senderCard.getToken();
+                String encodedAuth = android.util.Base64.encodeToString(
+                        authString.getBytes(),
+                        android.util.Base64.NO_WRAP
+                );
+                String authHeader = "Bearer " + encodedAuth;
+
+                String targetReceiver = receiver;
+                if (!receiver.matches("\\d+")) {
+                    targetReceiver = getCardNumberByUsername(receiver, authHeader);
+                    if (targetReceiver == null) {
+                        requireActivity().runOnUiThread(() -> {
+                            progressBar.setVisibility(View.GONE);
+                            transferButton.setEnabled(true);
+                            Toast.makeText(getContext(),
+                                    "Не удалось найти карту игрока",
+                                    Toast.LENGTH_SHORT).show();
+                        });
+                        return;
+                    }
+                }
+
+                if (senderCard.getNumber().equals(targetReceiver)) {
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        Toast.makeText(getContext(),
+                                "Нельзя перевести на ту же карту",
+                                Toast.LENGTH_SHORT).show();
+                    });
+                    return;
+                }
+
+                JSONObject transferJson = new JSONObject();
+                transferJson.put("receiver", targetReceiver);
+                transferJson.put("amount", amount);
+                transferJson.put("comment", comment);
+
+                RequestBody body = RequestBody.create(
+                        transferJson.toString(),
+                        MediaType.parse("application/json; charset=utf-8")
+                );
+
+                Request request = new Request.Builder()
+                        .url("https://spworlds.ru/api/public/transactions")
+                        .addHeader("Authorization", authHeader)
+                        .post(body)
+                        .build();
+
+                Response response = httpClient.newCall(request).execute();
+
+                if (!response.isSuccessful()) {
+                    String errorMessage = getErrorMessage(response.code());
+                    requireActivity().runOnUiThread(() -> {
+                        progressBar.setVisibility(View.GONE);
+                        transferButton.setEnabled(true);
+                        Toast.makeText(getContext(), errorMessage, Toast.LENGTH_SHORT).show();
+                    });
+                    return;
+                }
+
+                String responseBody = response.body().string();
+                JSONObject jsonResponse = new JSONObject(responseBody);
+                int newBalance = jsonResponse.getInt("balance");
+                updateCardBalance(senderCard.getId(), newBalance);
+
+                requireActivity().runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    transferButton.setEnabled(true);
+                    updateSelectedCardInfo();
+                    Toast.makeText(getContext(),
+                            "Перевод успешен! Новый баланс: " + newBalance + " АР",
+                            Toast.LENGTH_LONG).show();
+
+                    receiverEditText.setText("");
+                    amountEditText.setText("");
+                    commentEditText.setText("");
+                    selectedCardEditText.setText("");
+                    selectedReceiverCardNumber = null;
+                });
+
+            } catch (Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    progressBar.setVisibility(View.GONE);
+                    transferButton.setEnabled(true);
+                    Toast.makeText(getContext(),
+                            "Ошибка: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+
+    private String getErrorMessage(int code) {
+        switch (code) {
+            case 400: return "Неверные параметры запроса";
+            case 401: return "Ошибка авторизации - неверный ID или токен карты";
+            case 402: return "Недостаточно средств";
+            case 404: return "Карта получателя не найдена";
+            case 442: return "Ошибка аутентификации. Проверьте ID и токен карты";
+            default: return "Ошибка перевода: " + code;
+        }
+    }
+
     public void updateSelectedCardInfo() {
         try {
             String cardsJson = sharedPref.getString("saved_cards", "[]");
@@ -269,7 +434,6 @@ public class TransfersFragment extends Fragment {
                 return;
             }
 
-            // Всегда выбираем первую карту, если не выбрана другая
             String selectedCardId = sharedPref.getString("selected_card_id", null);
             Card selectedCard = null;
 
@@ -296,158 +460,7 @@ public class TransfersFragment extends Fragment {
 
         } catch (JSONException e) {
             selectedCardInfo.setText("Ошибка загрузки карт");
-            e.printStackTrace();
         }
-    }
-
-    private void makeTransfer(String receiver, int amount, String comment) {
-        progressBar.setVisibility(View.VISIBLE);
-        transferButton.setEnabled(false);
-
-        new Thread(() -> {
-            try {
-                String cardsJson = sharedPref.getString("saved_cards", "[]");
-                List<Card> cards = Card.fromJsonArray(cardsJson);
-
-                if (cards.isEmpty()) {
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        transferButton.setEnabled(true);
-                        Toast.makeText(getContext(), "Нет доступных карт", Toast.LENGTH_SHORT).show();
-                    });
-                    return;
-                }
-
-                // Получаем выбранную карту или первую из списка
-                Card senderCard = null;
-                String selectedCardId = sharedPref.getString("selected_card_id", null);
-
-                if (selectedCardId != null) {
-                    for (Card card : cards) {
-                        if (card.getId().equals(selectedCardId)) {
-                            senderCard = card;
-                            break;
-                        }
-                    }
-                }
-
-                if (senderCard == null) {
-                    senderCard = cards.get(0);
-                }
-
-                // Проверка суммы
-                if (amount == 0) {
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        transferButton.setEnabled(true);
-                        amountInputLayout.setError("Сумма не может быть равна 0");
-                    });
-                    return;
-                }
-
-                if (amount > 10000) {
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        transferButton.setEnabled(true);
-                        amountInputLayout.setError("Максимальная сумма перевода - 10000 АР");
-                    });
-                    return;
-                }
-
-                String authString = senderCard.getId() + ":" + senderCard.getToken();
-                String encodedAuth = android.util.Base64.encodeToString(
-                        authString.getBytes(),
-                        android.util.Base64.NO_WRAP
-                );
-                String authHeader = "Bearer " + encodedAuth;
-
-                // Если получатель - никнейм, получаем номер его карты
-                String targetReceiver = receiver;
-                if (!receiver.matches("\\d+")) {
-                    targetReceiver = getCardNumberByUsername(receiver, authHeader);
-                    if (targetReceiver == null) {
-                        requireActivity().runOnUiThread(() -> {
-                            progressBar.setVisibility(View.GONE);
-                            transferButton.setEnabled(true);
-                            Toast.makeText(getContext(),
-                                    "Не удалось найти карту пользователя " + receiver,
-                                    Toast.LENGTH_SHORT).show();
-                        });
-                        return;
-                    }
-                }
-
-                // Проверка на совпадение карт
-                if (senderCard.getNumber().equals(targetReceiver)) {
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        transferButton.setEnabled(true);
-                        Toast.makeText(getContext(),
-                                "Нельзя перевести на ту же карту",
-                                Toast.LENGTH_SHORT).show();
-                    });
-                    return;
-                }
-
-                // Формируем запрос на перевод
-                JSONObject transferJson = new JSONObject();
-                transferJson.put("receiver", targetReceiver);
-                transferJson.put("amount", amount);
-                transferJson.put("comment", comment);
-
-                RequestBody body = RequestBody.create(
-                        transferJson.toString(),
-                        MediaType.parse("application/json; charset=utf-8")
-                );
-
-                Request request = new Request.Builder()
-                        .url("https://spworlds.ru/api/public/transactions")
-                        .addHeader("Authorization", authHeader)
-                        .post(body)
-                        .build();
-
-                Response response = httpClient.newCall(request).execute();
-
-                if (response.isSuccessful()) {
-                    String responseBody = response.body().string();
-                    JSONObject jsonResponse = new JSONObject(responseBody);
-                    int newBalance = jsonResponse.getInt("balance");
-
-                    // Обновляем баланс карты
-                    updateCardBalance(senderCard.getId(), newBalance);
-
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        transferButton.setEnabled(true);
-                        updateSelectedCardInfo();
-                        Toast.makeText(getContext(),
-                                "Перевод успешен!\nНовый баланс: " + newBalance + " АР",
-                                Toast.LENGTH_LONG).show();
-
-                        // Очищаем поля
-                        receiverEditText.setText("");
-                        amountEditText.setText("");
-                        commentEditText.setText("");
-                    });
-                } else {
-                    requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        transferButton.setEnabled(true);
-                        Toast.makeText(getContext(),
-                                "Ошибка перевода: " + response.message(),
-                                Toast.LENGTH_SHORT).show();
-                    });
-                }
-            } catch (Exception e) {
-                requireActivity().runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    transferButton.setEnabled(true);
-                    Toast.makeText(getContext(),
-                            "Ошибка: " + e.getMessage(),
-                            Toast.LENGTH_SHORT).show();
-                });
-            }
-        }).start();
     }
 
     private void updateCardBalance(String cardId, int newBalance) throws JSONException {
@@ -467,37 +480,70 @@ public class TransfersFragment extends Fragment {
                 .apply();
     }
 
+    private String getAuthHeader(Card card) {
+        String authString = card.getId() + ":" + card.getToken();
+        String encodedAuth = android.util.Base64.encodeToString(
+                authString.getBytes(),
+                android.util.Base64.NO_WRAP
+        );
+        return "Bearer " + encodedAuth;
+    }
+
+    private Card getSelectedCard(List<Card> cards) {
+        String selectedCardId = sharedPref.getString("selected_card_id", null);
+        if (selectedCardId != null) {
+            for (Card card : cards) {
+                if (card.getId().equals(selectedCardId)) {
+                    return card;
+                }
+            }
+        }
+        return null;
+    }
+
+    private int getCardBalance(Card card, String authHeader) throws Exception {
+        Request request = new Request.Builder()
+                .url("https://spworlds.ru/api/public/card")
+                .addHeader("Authorization", authHeader)
+                .build();
+
+        Response response = httpClient.newCall(request).execute();
+        if (!response.isSuccessful()) {
+            return -1;
+        }
+
+        String responseBody = response.body().string();
+        JSONObject jsonResponse = new JSONObject(responseBody);
+        return jsonResponse.getInt("balance");
+    }
+
     private String getCardNumberByUsername(String username, String authHeader) throws Exception {
-        // Проверяем существование пользователя
         Request userRequest = new Request.Builder()
                 .url("https://spworlds.ru/api/public/users/" + username)
                 .addHeader("Authorization", authHeader)
                 .build();
 
         Response userResponse = httpClient.newCall(userRequest).execute();
-
         if (!userResponse.isSuccessful()) {
             return null;
         }
 
-        // Получаем карты пользователя
         Request cardsRequest = new Request.Builder()
                 .url("https://spworlds.ru/api/public/accounts/" + username + "/cards")
                 .addHeader("Authorization", authHeader)
                 .build();
 
         Response cardsResponse = httpClient.newCall(cardsRequest).execute();
-
-        if (cardsResponse.isSuccessful()) {
-            String responseBody = cardsResponse.body().string();
-            JSONArray cardsArray = new JSONArray(responseBody);
-
-            if (cardsArray.length() > 0) {
-                // Для простоты берем первую карту
-                return cardsArray.getJSONObject(0).getString("number");
-            }
+        if (!cardsResponse.isSuccessful()) {
+            return null;
         }
 
-        return null;
+        String responseBody = cardsResponse.body().string();
+        JSONArray cardsArray = new JSONArray(responseBody);
+        if (cardsArray.length() == 0) {
+            return null;
+        }
+
+        return cardsArray.getJSONObject(0).getString("number");
     }
 }

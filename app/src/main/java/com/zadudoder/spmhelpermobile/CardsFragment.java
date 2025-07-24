@@ -96,6 +96,12 @@ public class CardsFragment extends Fragment {
         }
 
         cardAdapter.updateCards(cards);
+
+        if (sharedPref.getString("selected_card_id", null) == null && !cards.isEmpty()) {
+            sharedPref.edit()
+                    .putString("selected_card_id", cards.get(0).getId())
+                    .apply();
+        }
     }
 
     private void showAddCardDialog() {
@@ -136,7 +142,6 @@ public class CardsFragment extends Fragment {
                 );
                 String authHeader = "Bearer " + encodedAuth;
 
-                // 1. Получаем информацию о карте
                 Request cardRequest = new Request.Builder()
                         .url("https://spworlds.ru/api/public/card")
                         .addHeader("Authorization", authHeader)
@@ -152,7 +157,6 @@ public class CardsFragment extends Fragment {
                     return;
                 }
 
-                // 2. Получаем информацию об аккаунте (для названия карты и номера)
                 Request accountRequest = new Request.Builder()
                         .url("https://spworlds.ru/api/public/accounts/me")
                         .addHeader("Authorization", authHeader)
@@ -169,22 +173,19 @@ public class CardsFragment extends Fragment {
                     JSONObject jsonResponse = new JSONObject(responseBody);
                     JSONArray cardsArray = jsonResponse.getJSONArray("cards");
 
-                    // Ищем текущую карту в списке
                     for (int i = 0; i < cardsArray.length(); i++) {
                         JSONObject card = cardsArray.getJSONObject(i);
                         if (card.getString("id").equals(cardId)) {
-                            cardName = card.getString("name"); // Получаем настоящее название
+                            cardName = card.getString("name");
                             cardNumber = card.getString("number");
                             break;
                         }
                     }
 
-                    // Получаем баланс
                     JSONObject cardJson = new JSONObject(cardResponse.body().string());
                     balance = cardJson.getInt("balance");
                 }
 
-                // 3. Формируем полное название для отображения
                 String displayName = cardName + " (" + cardNumber + ")";
                 Card newCard = new Card(cardId, cardToken, displayName, cardNumber, balance);
 

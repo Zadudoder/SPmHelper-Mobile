@@ -21,14 +21,12 @@ public class Card {
         this.balance = balance;
     }
 
-    // Геттеры
     public String getId() { return id; }
     public String getToken() { return token; }
     public String getName() { return name; }
     public String getNumber() { return number; }
     public int getBalance() { return balance; }
 
-    // Метод для преобразования JSON в список карт
     public static List<Card> fromJsonArray(String json) throws JSONException {
         List<Card> cards = new ArrayList<>();
         JSONArray jsonArray = new JSONArray(json);
@@ -46,7 +44,6 @@ public class Card {
         return cards;
     }
 
-    // Метод для получения короткого номера карты
     public String getShortNumber() {
         return number;
     }

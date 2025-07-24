@@ -3,9 +3,9 @@ package com.zadudoder.spmhelpermobile;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,7 +30,6 @@ public class CardViewHolder extends RecyclerView.ViewHolder {
         this.sharedPref = sharedPref;
         this.adapter = adapter;
 
-        // Загружаем выбранную карту
         String selectedCardId = sharedPref.getString("selected_card_id", null);
         if (selectedCardId != null) {
             for (Card card : cards) {
@@ -46,7 +45,6 @@ public class CardViewHolder extends RecyclerView.ViewHolder {
         cardName.setText(card.getName());
         cardBalance.setText("Баланс: " + card.getBalance() + " АР");
 
-        // Проверяем, является ли текущая карта выбранной
         String selectedCardId = sharedPref.getString("selected_card_id", "");
         boolean isSelected = card.getId().equals(selectedCardId);
 
@@ -54,18 +52,15 @@ public class CardViewHolder extends RecyclerView.ViewHolder {
         selectedLabel.setVisibility(isSelected ? View.VISIBLE : View.GONE);
 
         itemView.setOnClickListener(v -> {
-            // Сохраняем выбранную карту
-            SharedPreferences.Editor editor = sharedPref.edit();
-            editor.putString("selected_card_id", card.getId());
-            editor.apply();
+            sharedPref.edit()
+                    .putString("selected_card_id", card.getId())
+                    .apply();
 
-            // Обновляем отображение
             adapter.notifyDataSetChanged();
 
-            // Обновляем информацию в фрагменте переводов
-            if (itemView.getContext() instanceof MainActivity) {
-                ((MainActivity) itemView.getContext()).updateTransfersFragment();
-            }
+            ((FragmentActivity)itemView.getContext())
+                    .getSupportFragmentManager()
+                    .popBackStack();
         });
 
         itemView.findViewById(R.id.delete_button).setOnClickListener(v -> {
@@ -81,14 +76,14 @@ public class CardViewHolder extends RecyclerView.ViewHolder {
     private void removeCard(Card card) {
         int position = getAdapterPosition();
         if (position != RecyclerView.NO_POSITION) {
+            String selectedCardId = sharedPref.getString("selected_card_id", null);
+            if (card.getId().equals(selectedCardId)) {
+                sharedPref.edit().remove("selected_card_id").apply();
+            }
+
             cards.remove(position);
             adapter.notifyItemRemoved(position);
             saveCardsToPref();
-
-            if (card.equals(selectedCard)) {
-                selectedCard = null;
-                sharedPref.edit().remove("selected_card_id").apply();
-            }
         }
     }
 
