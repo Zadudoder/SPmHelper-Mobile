@@ -3,6 +3,7 @@ package com.zadudoder.spmhelpermobile;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -131,6 +132,10 @@ public class TransfersFragment extends Fragment {
             String receiver = receiverEditText.getText().toString().trim();
             String amountStr = amountEditText.getText().toString().trim();
             String comment = commentEditText.getText().toString().trim();
+
+            if (comment.isEmpty()) {
+                comment = " ";
+            }
 
             if (receiver.isEmpty()) {
                 receiverInputLayout.setError("Заполните поле");
@@ -372,13 +377,20 @@ public class TransfersFragment extends Fragment {
                 Response response = httpClient.newCall(request).execute();
 
                 if (!response.isSuccessful()) {
-                    String errorMessage = getErrorMessage(response.code());
+                    String errorBody = response.body().string();
+                    Log.e("API_ERROR", "Code: " + response.code() + ", Body: " + errorBody);
+
                     requireActivity().runOnUiThread(() -> {
-                        progressBar.setVisibility(View.GONE);
-                        transferButton.setEnabled(true);
-                        Toast.makeText(getContext(), errorMessage, Toast.LENGTH_SHORT).show();
+                        String errorMsg = "Ошибка " + response.code();
+                        try {
+                            JSONObject errorJson = new JSONObject(errorBody);
+                            if (errorJson.has("error")) {
+                                errorMsg += ": " + errorJson.getString("error");
+                            }
+                        } catch (JSONException ignored) {}
+
+                        Toast.makeText(getContext(), errorMsg, Toast.LENGTH_LONG).show();
                     });
-                    return;
                 }
 
                 String responseBody = response.body().string();
@@ -481,13 +493,16 @@ public class TransfersFragment extends Fragment {
     }
 
     private String getAuthHeader(Card card) {
-        String authString = card.getId() + ":" + card.getToken();
+        String cleanToken = card.getToken().replaceAll("\\s+", "");
+        String authString = card.getId() + ":" + cleanToken;
+
         String encodedAuth = android.util.Base64.encodeToString(
                 authString.getBytes(),
                 android.util.Base64.NO_WRAP
         );
-        return "Bearer " + encodedAuth;
+        return "Bearer " + encodedAuth.trim();
     }
+
 
     private Card getSelectedCard(List<Card> cards) {
         String selectedCardId = sharedPref.getString("selected_card_id", null);
