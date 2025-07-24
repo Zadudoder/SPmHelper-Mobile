@@ -3,6 +3,7 @@ package com.zadudoder.spmhelpermobile;
 import android.content.SharedPreferences;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
@@ -14,22 +15,58 @@ import java.util.List;
 public class CardViewHolder extends RecyclerView.ViewHolder {
     private final TextView cardName;
     private final TextView cardBalance;
+    private final TextView selectedLabel;
     private final List<Card> cards;
     private final SharedPreferences sharedPref;
     private final CardAdapter adapter;
+    private Card selectedCard;
 
     public CardViewHolder(@NonNull View itemView, List<Card> cards, SharedPreferences sharedPref, CardAdapter adapter) {
         super(itemView);
         this.cardName = itemView.findViewById(R.id.card_name);
         this.cardBalance = itemView.findViewById(R.id.card_balance);
+        this.selectedLabel = itemView.findViewById(R.id.selected_label);
         this.cards = cards;
         this.sharedPref = sharedPref;
         this.adapter = adapter;
+
+        // Загружаем выбранную карту
+        String selectedCardId = sharedPref.getString("selected_card_id", null);
+        if (selectedCardId != null) {
+            for (Card card : cards) {
+                if (card.getId().equals(selectedCardId)) {
+                    selectedCard = card;
+                    break;
+                }
+            }
+        }
     }
 
     public void bind(Card card) {
         cardName.setText(card.getName());
         cardBalance.setText("Баланс: " + card.getBalance() + " АР");
+
+        // Проверяем, является ли текущая карта выбранной
+        String selectedCardId = sharedPref.getString("selected_card_id", "");
+        boolean isSelected = card.getId().equals(selectedCardId);
+
+        selectedLabel.setText("Для оплаты");
+        selectedLabel.setVisibility(isSelected ? View.VISIBLE : View.GONE);
+
+        itemView.setOnClickListener(v -> {
+            // Сохраняем выбранную карту
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putString("selected_card_id", card.getId());
+            editor.apply();
+
+            // Обновляем отображение
+            adapter.notifyDataSetChanged();
+
+            // Обновляем информацию в фрагменте переводов
+            if (itemView.getContext() instanceof MainActivity) {
+                ((MainActivity) itemView.getContext()).updateTransfersFragment();
+            }
+        });
 
         itemView.findViewById(R.id.delete_button).setOnClickListener(v -> {
             new AlertDialog.Builder(itemView.getContext())
@@ -47,6 +84,11 @@ public class CardViewHolder extends RecyclerView.ViewHolder {
             cards.remove(position);
             adapter.notifyItemRemoved(position);
             saveCardsToPref();
+
+            if (card.equals(selectedCard)) {
+                selectedCard = null;
+                sharedPref.edit().remove("selected_card_id").apply();
+            }
         }
     }
 

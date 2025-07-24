@@ -55,6 +55,12 @@ public class CardsFragment extends Fragment {
         return view;
     }
 
+    public void updateSelectedCard() {
+        if (cardAdapter != null) {
+            cardAdapter.notifyDataSetChanged();
+        }
+    }
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);

@@ -1,5 +1,11 @@
 package com.zadudoder.spmhelpermobile;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import java.util.ArrayList;
+import java.util.List;
+
 public class Card {
     private String id;
     private String token;
@@ -21,4 +27,31 @@ public class Card {
     public String getName() { return name; }
     public String getNumber() { return number; }
     public int getBalance() { return balance; }
+
+    // Метод для преобразования JSON в список карт
+    public static List<Card> fromJsonArray(String json) throws JSONException {
+        List<Card> cards = new ArrayList<>();
+        JSONArray jsonArray = new JSONArray(json);
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+            JSONObject jsonObject = jsonArray.getJSONObject(i);
+            cards.add(new Card(
+                    jsonObject.getString("id"),
+                    jsonObject.getString("token"),
+                    jsonObject.getString("name"),
+                    jsonObject.getString("number"),
+                    jsonObject.getInt("balance")
+            ));
+        }
+        return cards;
+    }
+
+    // Метод для получения короткого номера карты
+    public String getShortNumber() {
+        return number;
+    }
+
+    public String getDisplayName() {
+        return name + " (" + getShortNumber() + ")";
+    }
 }

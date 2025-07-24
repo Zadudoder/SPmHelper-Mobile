@@ -40,4 +40,11 @@ public class MainActivity extends AppCompatActivity {
                     .commit();
         }
     }
+
+    public void updateTransfersFragment() {
+        Fragment fragment = getSupportFragmentManager().findFragmentByTag("TransfersFragment");
+        if (fragment instanceof TransfersFragment) {
+            ((TransfersFragment) fragment).updateSelectedCardInfo();
+        }
+    }
 }
