@@ -105,14 +105,22 @@ public class CardsFragment extends Fragment {
     }
 
     private void showAddCardDialog() {
+        showAddCardDialog("", ""); // Первый вызов - пустые поля
+    }
+
+    private void showAddCardDialog(String savedCardId, String savedCardToken) {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_add_card, null);
         EditText cardIdEditText = dialogView.findViewById(R.id.card_id_edit_text);
         EditText cardTokenEditText = dialogView.findViewById(R.id.card_token_edit_text);
 
-        new AlertDialog.Builder(getContext())
+        // Восстанавливаем сохранённые данные (если они есть)
+        cardIdEditText.setText(savedCardId);
+        cardTokenEditText.setText(savedCardToken);
+
+        AlertDialog dialog = new AlertDialog.Builder(getContext())
                 .setTitle("Добавить карту")
                 .setView(dialogView)
-                .setPositiveButton("Добавить", (dialog, which) -> {
+                .setPositiveButton("Добавить", (dialogInterface, which) -> {
                     String cardId = cardIdEditText.getText().toString().trim();
                     String cardToken = cardTokenEditText.getText().toString().trim();
 
@@ -122,8 +130,48 @@ public class CardsFragment extends Fragment {
                         verifyAndAddCard(cardId, cardToken);
                     }
                 })
-                .setNegativeButton("Отмена", null)
-                .show();
+                .setNegativeButton("Отмена", (dialogInterface, which) -> {
+                    if (!cardIdEditText.getText().toString().trim().isEmpty() ||
+                            !cardTokenEditText.getText().toString().trim().isEmpty()) {
+                        showConfirmDiscardDialog(cardIdEditText, cardTokenEditText);
+                    } else {
+                        dialogInterface.dismiss();
+                    }
+                })
+                .create();
+
+        dialog.setOnCancelListener(dialogInterface -> {
+            if (!cardIdEditText.getText().toString().trim().isEmpty() ||
+                    !cardTokenEditText.getText().toString().trim().isEmpty()) {
+                showConfirmDiscardDialog(cardIdEditText, cardTokenEditText);
+            }
+        });
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_bg);
+        }
+        dialog.show();
+    }
+
+    private void showConfirmDiscardDialog(EditText cardIdEditText, EditText cardTokenEditText) {
+        String currentCardId = cardIdEditText.getText().toString().trim();
+        String currentCardToken = cardTokenEditText.getText().toString().trim();
+
+        AlertDialog CancelDialog = new AlertDialog.Builder(getContext())
+                .setTitle("Сбросить данные")
+                .setMessage("Вы заполнили некоторые поля. Хотите сбросить введенные данные?")
+                .setPositiveButton("Да", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Отмена", (dialog, which) -> {
+                    dialog.dismiss();
+                    // Передаём сохранённые данные обратно в диалог
+                    showAddCardDialog(currentCardId, currentCardToken);
+                })
+                .create();
+        if (CancelDialog.getWindow() != null) {
+            CancelDialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_bg);
+        }
+        CancelDialog.show();
     }
 
     private void setCards(List<Card> cards) {

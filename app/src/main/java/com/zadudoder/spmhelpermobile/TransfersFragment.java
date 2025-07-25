@@ -276,14 +276,18 @@ public class TransfersFragment extends Fragment {
             cardNames[i] = receiverCards.get(i).getName() + " (" + receiverCards.get(i).getNumber() + ")";
         }
 
-        new AlertDialog.Builder(requireContext())
+        AlertDialog SelectCard = new AlertDialog.Builder(requireContext())
                 .setTitle("Выберите карту")
                 .setItems(cardNames, (dialog, which) -> {
                     selectedReceiverCardNumber = receiverCards.get(which).getNumber();
                     selectedCardEditText.setText(cardNames[which]);
                 })
                 .setNegativeButton("Отмена", null)
-                .show();
+                .create();
+        if (SelectCard.getWindow() != null) {
+            SelectCard.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_bg);
+        }
+        SelectCard.show();
     }
 
     private void makeTransfer(String receiver, int amount, String comment) {
