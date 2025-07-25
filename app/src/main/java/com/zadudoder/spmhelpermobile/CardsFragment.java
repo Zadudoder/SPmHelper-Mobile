@@ -69,7 +69,6 @@ public class CardsFragment extends Fragment {
         cardAdapter = new CardAdapter(new ArrayList<>(), sharedPref);
         cardsRecyclerView.setAdapter(cardAdapter);
 
-
         loadSavedCards();
 
         addCardButton.setOnClickListener(v -> showAddCardDialog());
@@ -105,20 +104,20 @@ public class CardsFragment extends Fragment {
     }
 
     private void showAddCardDialog() {
-        showAddCardDialog("", ""); // Первый вызов - пустые поля
+        showAddCardDialog("", "", false);
     }
 
-    private void showAddCardDialog(String savedCardId, String savedCardToken) {
+    private void showAddCardDialog(String savedCardId, String savedCardToken, boolean showError) {
         View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_add_card, null);
         EditText cardIdEditText = dialogView.findViewById(R.id.card_id_edit_text);
         EditText cardTokenEditText = dialogView.findViewById(R.id.card_token_edit_text);
 
-        // Восстанавливаем сохранённые данные (если они есть)
+        // Восстанавливаем сохранённые данные
         cardIdEditText.setText(savedCardId);
         cardTokenEditText.setText(savedCardToken);
 
-        AlertDialog dialog = new AlertDialog.Builder(getContext())
-                .setTitle("Добавить карту")
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext())
+                .setTitle(showError ? "Неверные данные карты" : "Добавить карту")
                 .setView(dialogView)
                 .setPositiveButton("Добавить", (dialogInterface, which) -> {
                     String cardId = cardIdEditText.getText().toString().trim();
@@ -126,6 +125,7 @@ public class CardsFragment extends Fragment {
 
                     if (cardId.isEmpty() || cardToken.isEmpty()) {
                         Toast.makeText(getContext(), "Заполните все поля", Toast.LENGTH_SHORT).show();
+                        showAddCardDialog(cardId, cardToken, false);
                     } else {
                         verifyAndAddCard(cardId, cardToken);
                     }
@@ -137,8 +137,13 @@ public class CardsFragment extends Fragment {
                     } else {
                         dialogInterface.dismiss();
                     }
-                })
-                .create();
+                });
+
+        if (showError) {
+            builder.setMessage("Проверьте правильность введенных данных");
+        }
+
+        AlertDialog dialog = builder.create();
 
         dialog.setOnCancelListener(dialogInterface -> {
             if (!cardIdEditText.getText().toString().trim().isEmpty() ||
@@ -146,6 +151,7 @@ public class CardsFragment extends Fragment {
                 showConfirmDiscardDialog(cardIdEditText, cardTokenEditText);
             }
         });
+
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(R.drawable.dialog_rounded_bg);
         }
@@ -164,8 +170,7 @@ public class CardsFragment extends Fragment {
                 })
                 .setNegativeButton("Отмена", (dialog, which) -> {
                     dialog.dismiss();
-                    // Передаём сохранённые данные обратно в диалог
-                    showAddCardDialog(currentCardId, currentCardToken);
+                    showAddCardDialog(currentCardId, currentCardToken, false);
                 })
                 .create();
         if (CancelDialog.getWindow() != null) {
@@ -200,7 +205,7 @@ public class CardsFragment extends Fragment {
                 if (!cardResponse.isSuccessful()) {
                     requireActivity().runOnUiThread(() -> {
                         progressBar.setVisibility(View.GONE);
-                        Toast.makeText(getContext(), "Неверные данные карты", Toast.LENGTH_SHORT).show();
+                        showAddCardDialog(cardId, cardToken, true);
                     });
                     return;
                 }

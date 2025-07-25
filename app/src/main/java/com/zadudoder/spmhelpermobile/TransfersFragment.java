@@ -137,6 +137,11 @@ public class TransfersFragment extends Fragment {
                 comment = " ";
             }
 
+            if (comment.length() > 32) {
+                Toast.makeText(getContext(), "Комментарий не больше 32 символов", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             if (receiver.isEmpty()) {
                 receiverInputLayout.setError("Заполните поле");
                 return;
