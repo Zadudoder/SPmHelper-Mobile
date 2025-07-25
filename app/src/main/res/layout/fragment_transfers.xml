@@ -15,10 +15,12 @@
         android:adjustViewBounds="true"
         android:maxHeight="120dp"
         android:scaleType="fitCenter"
+        app:layout_constraintBottom_toTopOf="@+id/linearLayout"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.609"
+        app:layout_constraintHorizontal_bias="0.487"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.774"
         app:layout_constraintWidth_percent="0.9"
         app:srcCompat="@drawable/payment" />
 
@@ -27,21 +29,23 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
-        android:orientation="vertical"
         android:backgroundTint="#404040"
+        android:orientation="vertical"
         android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageView">
+        app:layout_constraintTop_toTopOf="parent">
 
         <RadioGroup
             android:id="@+id/transferTypeGroup"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
+            android:layout_gravity="center"
+            android:layout_marginBottom="8dp"
+            android:orientation="horizontal">
 
             <RadioButton
                 android:id="@+id/transferByCard"
@@ -52,7 +56,7 @@
 
             <RadioButton
                 android:id="@+id/transferByNickname"
-                android:layout_width="155dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:text="По никнейму" />
@@ -93,9 +97,9 @@
                 android:id="@+id/selected_card_edit_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none"
-                android:focusable="false"
                 android:clickable="true"
+                android:focusable="false"
+                android:inputType="none"
                 android:maxLines="1" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -159,11 +163,13 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:textAlignment="center"
-        android:textColor="@color/white"
         android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/transfer_button"
+        app:layout_constraintVertical_bias="0.0"
         tools:text="Перевод с: Dydka (22311)\nБаланс: 336 AP" />
 
     <ProgressBar
