@@ -1,4 +1,4 @@
-package com.zadudoder.spmhelpermobile;
+package com.zadudoder.spmhelpermobile.Fragment;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -16,11 +16,14 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
+import com.zadudoder.spmhelpermobile.Card;
+import com.zadudoder.spmhelpermobile.CardAdapter;
+import com.zadudoder.spmhelpermobile.R;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;

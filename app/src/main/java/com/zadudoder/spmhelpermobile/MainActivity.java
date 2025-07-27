@@ -8,6 +8,11 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.zadudoder.spmhelpermobile.Fragment.CallsFragment;
+import com.zadudoder.spmhelpermobile.Fragment.CardsFragment;
+import com.zadudoder.spmhelpermobile.Fragment.ProfileFragment;
+import com.zadudoder.spmhelpermobile.Fragment.SettingsFragment;
+import com.zadudoder.spmhelpermobile.Fragment.TransfersFragment;
 
 public class MainActivity extends AppCompatActivity {
     private ViewPager2 viewPager;
@@ -32,21 +37,32 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPageSelected(int position) {
                 super.onPageSelected(position);
-                if (position == 0) {
-                    bottomNavigation.setSelectedItemId(R.id.navigation_transfers);
-                } else if (position == 1) {
-                    bottomNavigation.setSelectedItemId(R.id.navigation_cards);
+                switch (position) {
+                    case 0: bottomNavigation.setSelectedItemId(R.id.navigation_profile); break;
+                    case 1: bottomNavigation.setSelectedItemId(R.id.navigation_transfers); break;
+                    case 2: bottomNavigation.setSelectedItemId(R.id.navigation_cards); break;
+                    case 3: bottomNavigation.setSelectedItemId(R.id.navigation_calls); break;
+                    case 4: bottomNavigation.setSelectedItemId(R.id.navigation_settings); break;
                 }
             }
         });
 
         bottomNavigation.setOnNavigationItemSelectedListener(item -> {
             int itemId = item.getItemId();
-            if (itemId == R.id.navigation_transfers) {
+            if (itemId == R.id.navigation_profile) {
                 viewPager.setCurrentItem(0, true);
                 return true;
-            } else if (itemId == R.id.navigation_cards) {
+            } else if (itemId == R.id.navigation_transfers) {
                 viewPager.setCurrentItem(1, true);
+                return true;
+            } else if (itemId == R.id.navigation_cards) {
+                viewPager.setCurrentItem(2, true);
+                return true;
+            } else if (itemId == R.id.navigation_calls) {
+                viewPager.setCurrentItem(3, true);
+                return true;
+            } else if (itemId == R.id.navigation_settings) {
+                viewPager.setCurrentItem(4, true);
                 return true;
             }
             return false;
@@ -61,15 +77,19 @@ public class MainActivity extends AppCompatActivity {
         @NonNull
         @Override
         public Fragment createFragment(int position) {
-            if (position == 0) {
-                return new TransfersFragment();
+            switch (position) {
+                case 0: return new ProfileFragment();
+                case 1: return new TransfersFragment();
+                case 2: return new CardsFragment();
+                case 3: return new CallsFragment();
+                case 4: return new SettingsFragment();
+                default: return new ProfileFragment();
             }
-            return new CardsFragment();
         }
 
         @Override
         public int getItemCount() {
-            return 2;
+            return 5; // Теперь у нас 5 фрагментов
         }
     }
 

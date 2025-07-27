@@ -1,4 +1,4 @@
-package com.zadudoder.spmhelpermobile;
+package com.zadudoder.spmhelpermobile.Fragment;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -20,6 +20,9 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
+import com.zadudoder.spmhelpermobile.Card;
+import com.zadudoder.spmhelpermobile.R;
+
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
